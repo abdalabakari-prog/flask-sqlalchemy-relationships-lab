@@ -3,7 +3,11 @@
 from flask import Flask, jsonify
 from flask_migrate import Migrate
 
-from models import db, Event, Session, Speaker, Bio
+# Handle imports from both local and server directory
+try:
+    from server.models import db, Event, Session, Speaker, Bio
+except ImportError:
+    from models import db, Event, Session, Speaker, Bio
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
