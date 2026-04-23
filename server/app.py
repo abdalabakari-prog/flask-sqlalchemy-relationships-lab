@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 
-from flask import Flask, jsonify, request
-
-# Optional flask_migrate for development
-try:
-    from flask_migrate import Migrate
-    migrate = Migrate()
-except ImportError:
-    migrate = None
+from flask import Flask, jsonify
+from flask_migrate import Migrate
 
 from models import db, Event, Session, Speaker, Bio
 
@@ -16,36 +10,13 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.json.compact = False
 
+migrate = Migrate(app, db)
 db.init_app(app)
-if migrate:
-    migrate.init_app(app, db)
 
-@app.route('/')
-def welcome():
-    return jsonify({"message": "Welcome to the Event Management API"}), 200
-
-@app.route('/events', methods=['GET', 'POST'])
-def handle_events():
-    if request.method == 'POST':
-        data = request.get_json()
-        
-        # Check for required title field
-        if not data or 'title' not in data:
-            return jsonify({"error": "title field is required"}), 400
-        
-        # Create new event (using title as name)
-        title = data.get('title')
-        location = data.get('location', '')
-        
-        new_event = Event(name=title, location=location)
-        db.session.add(new_event)
-        db.session.commit()
-        
-        return jsonify({"id": new_event.id, "title": new_event.name}), 201
-    
-    # GET request
-    events_list = Event.query.all()
-    return jsonify([{"id": e.id, "name": e.name, "location": e.location} for e in events_list]), 200
+@app.route('/events')
+def get_events():
+    events = Event.query.all()
+    return jsonify([{"id": e.id, "name": e.name, "location": e.location} for e in events]), 200
 
 @app.route('/events/<int:id>/sessions')
 def get_event_sessions(id):
@@ -77,10 +48,6 @@ def get_session_speakers(id):
         "name": sp.name,
         "bio_text": sp.bio.bio_text if sp.bio else "No bio available"
     } for sp in session.speakers]), 200
-
-# Export models and create events list for auto-testing
-events = []
-__all__ = ['app', 'db', 'Event', 'Session', 'Speaker', 'Bio', 'events']
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
